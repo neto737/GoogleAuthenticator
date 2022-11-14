@@ -158,6 +158,10 @@ class PHPGangsta_GoogleAuthenticator
      */
     public function setCodeLength(int $length): PHPGangsta_GoogleAuthenticator
     {
+        if ($length < 6) {
+            throw new Exception('Code length must be greater than or equal to 6.');
+        }
+
         $this->_codeLength = $length;
 
         return $this;
