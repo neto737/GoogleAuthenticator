@@ -21,7 +21,7 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @return string
      */
-    public function createSecret($secretLength = 16)
+    public function createSecret(int $secretLength = 16): string
     {
         $validChars = $this->_getBase32LookupTable();
 
@@ -58,7 +58,7 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @return string
      */
-    public function getCode($secret, $timeSlice = null)
+    public function getCode(string $secret, ?int $timeSlice = null): string
     {
         if ($timeSlice === null) {
             $timeSlice = floor(time() / 30);
@@ -67,7 +67,7 @@ class PHPGangsta_GoogleAuthenticator
         $secretkey = $this->_base32Decode($secret);
 
         // Pack time into binary string
-        $time = chr(0).chr(0).chr(0).chr(0).pack('N*', $timeSlice);
+        $time = chr(0) . chr(0) . chr(0) . chr(0) . pack('N*', $timeSlice);
         // Hash it with users secret key
         $hm = hash_hmac('SHA1', $time, $secretkey, true);
         // Use last nipple of result as index/offset
@@ -96,15 +96,15 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @return string
      */
-    public function getQRCodeGoogleUrl($name, $secret, $title = null, $params = array())
+    public function getQRCodeGoogleUrl(string $name, string $secret, string $title = null, array $params = []): string
     {
         $width = !empty($params['width']) && (int) $params['width'] > 0 ? (int) $params['width'] : 200;
         $height = !empty($params['height']) && (int) $params['height'] > 0 ? (int) $params['height'] : 200;
         $level = !empty($params['level']) && array_search($params['level'], array('L', 'M', 'Q', 'H')) !== false ? $params['level'] : 'M';
 
-        $urlencoded = urlencode('otpauth://totp/'.$name.'?secret='.$secret.'');
+        $urlencoded = urlencode('otpauth://totp/' . $name . '?secret=' . $secret . '');
         if (isset($title)) {
-            $urlencoded .= urlencode('&issuer='.urlencode($title));
+            $urlencoded .= urlencode('&issuer=' . urlencode($title));
         }
 
         return "https://api.qrserver.com/v1/create-qr-code/?data=$urlencoded&size=${width}x${height}&ecc=$level";
@@ -120,7 +120,7 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @return bool
      */
-    public function verifyCode($secret, $code, $discrepancy = 1, $currentTimeSlice = null)
+    public function verifyCode(string $secret, string $code, int $discrepancy = 1, ?int $currentTimeSlice = null): bool
     {
         if ($currentTimeSlice === null) {
             $currentTimeSlice = floor(time() / 30);
@@ -147,7 +147,7 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @return PHPGangsta_GoogleAuthenticator
      */
-    public function setCodeLength($length)
+    public function setCodeLength(int $length): PHPGangsta_GoogleAuthenticator
     {
         $this->_codeLength = $length;
 
@@ -161,7 +161,7 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @return bool|string
      */
-    protected function _base32Decode($secret)
+    protected function _base32Decode($secret): mixed
     {
         if (empty($secret)) {
             return '';
@@ -176,8 +176,10 @@ class PHPGangsta_GoogleAuthenticator
             return false;
         }
         for ($i = 0; $i < 4; ++$i) {
-            if ($paddingCharCount == $allowedValues[$i] &&
-                substr($secret, -($allowedValues[$i])) != str_repeat($base32chars[32], $allowedValues[$i])) {
+            if (
+                $paddingCharCount == $allowedValues[$i] &&
+                substr($secret, - ($allowedValues[$i])) != str_repeat($base32chars[32], $allowedValues[$i])
+            ) {
                 return false;
             }
         }
@@ -206,15 +208,15 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @return array
      */
-    protected function _getBase32LookupTable()
+    protected function _getBase32LookupTable(): array
     {
-        return array(
+        return [
             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', //  7
             'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', // 15
             'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', // 23
             'Y', 'Z', '2', '3', '4', '5', '6', '7', // 31
             '=',  // padding char
-        );
+        ];
     }
 
     /**
@@ -226,7 +228,7 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @return bool True if the two strings are identical
      */
-    private function timingSafeEquals($safeString, $userString)
+    private function timingSafeEquals(string $safeString, string $userString): bool
     {
         if (function_exists('hash_equals')) {
             return hash_equals($safeString, $userString);
