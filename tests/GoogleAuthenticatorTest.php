@@ -52,7 +52,7 @@ class GoogleAuthenticatorTest extends TestCase
     {
         $ga = new GoogleAuthenticator;
 
-        $this->assertInstanceOf('PHPGangsta_GoogleAuthenticator', $ga);
+        $this->assertInstanceOf('neto737\GoogleAuthenticator', $ga);
     }
 
     public function testCreateSecretDefaultsToSixteenCharacters(): void
@@ -133,7 +133,7 @@ class GoogleAuthenticatorTest extends TestCase
     {
         $result = $this->googleAuthenticator->setCodeLength(6);
 
-        $this->assertInstanceOf('PHPGangsta_GoogleAuthenticator', $result);
+        $this->assertInstanceOf('neto737\GoogleAuthenticator', $result);
     }
 
     public function testValidateCorrectCodeLength(): void
