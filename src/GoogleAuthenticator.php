@@ -205,11 +205,11 @@ class PHPGangsta_GoogleAuthenticator
                 return false;
             }
             for ($j = 0; $j < 8; ++$j) {
-                $x .= str_pad(base_convert(@$base32charsFlipped[@$secret[$i + $j]], 10, 2), 5, '0', STR_PAD_LEFT);
+                $x .= str_pad(base_convert((string) @$base32charsFlipped[@$secret[$i + $j]], 10, 2), 5, '0', STR_PAD_LEFT);
             }
             $eightBits = str_split($x, 8);
             for ($z = 0; $z < count($eightBits); ++$z) {
-                $binaryString .= (($y = chr(base_convert($eightBits[$z], 2, 10))) || ord($y) == 48) ? $y : '';
+                $binaryString .= (($y = chr(base_convert((string) $eightBits[$z], 2, 10))) || ord($y) == 48) ? $y : '';
             }
         }
 

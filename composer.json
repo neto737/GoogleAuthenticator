@@ -1,9 +1,12 @@
 {
-    "name": "phpgangsta/googleauthenticator",
+    "name": "neto737/googleauthenticator",
     "description": "Google Authenticator 2-factor authentication",
-    "version": "1.0.0",
     "type": "library",
-    "keywords": ["GoogleAuthenticator", "TOTP", "rfc6238"],
+    "keywords": [
+        "GoogleAuthenticator",
+        "TOTP",
+        "rfc6238"
+    ],
     "license": "BSD-4-Clause",
     "authors": [
         {
@@ -14,17 +17,18 @@
         }
     ],
     "support": {
-        "source": "https://github.com/PHPGangsta/GoogleAuthenticator",
-        "issues": "https://github.com/PHPGangsta/GoogleAuthenticator/issues"
+        "source": "https://github.com/neto737/GoogleAuthenticator",
+        "issues": "https://github.com/neto737/GoogleAuthenticator/issues"
     },
     "require": {
-        "php": ">=5.3"
+        "php": ">=8.0"
     },
-	"autoload": {
-		"classmap": ["PHPGangsta/GoogleAuthenticator.php"]
-	}
+    "require-dev": {
+        "phpunit/phpunit": "^9"
+    },
+    "autoload": {
+        "classmap": [
+            "src/"
+        ]
+    }
 }
-
-
-
-
