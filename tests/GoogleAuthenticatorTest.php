@@ -1,5 +1,6 @@
 <?php
 
+use neto737\GoogleAuthenticator;
 use PHPUnit\Framework\TestCase;
 
 class GoogleAuthenticatorTest extends TestCase
@@ -13,7 +14,7 @@ class GoogleAuthenticatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->googleAuthenticator = new PHPGangsta_GoogleAuthenticator();
+        $this->googleAuthenticator = new GoogleAuthenticator;
     }
 
     public function codeProvider(): array
@@ -49,7 +50,7 @@ class GoogleAuthenticatorTest extends TestCase
 
     public function testItCanBeInstantiated(): void
     {
-        $ga = new PHPGangsta_GoogleAuthenticator();
+        $ga = new GoogleAuthenticator;
 
         $this->assertInstanceOf('PHPGangsta_GoogleAuthenticator', $ga);
     }

@@ -1,5 +1,6 @@
 <?php
 
+namespace neto737;
 /**
  * PHP Class for handling Google Authenticator 2-factor authentication.
  *
@@ -9,7 +10,7 @@
  *
  * @link http://www.phpgangsta.de/
  */
-class PHPGangsta_GoogleAuthenticator
+class GoogleAuthenticator
 {
     protected $_codeLength = 6;
 
@@ -27,10 +28,12 @@ class PHPGangsta_GoogleAuthenticator
 
         // Valid secret lengths are 80 to 640 bits
         if ($secretLength < 16 || $secretLength > 128) {
-            throw new Exception('Bad secret length');
+            throw new \Exception('Bad secret length');
         }
+        
         $secret = '';
         $rnd = false;
+
         if (function_exists('random_bytes')) {
             $rnd = random_bytes($secretLength);
         } elseif (function_exists('openssl_random_pseudo_bytes')) {
@@ -39,12 +42,13 @@ class PHPGangsta_GoogleAuthenticator
                 $rnd = false;
             }
         }
+
         if ($rnd !== false) {
             for ($i = 0; $i < $secretLength; ++$i) {
                 $secret .= $validChars[ord($rnd[$i]) & 31];
             }
         } else {
-            throw new Exception('No source of secure random');
+            throw new \Exception('No source of secure random');
         }
 
         return $secret;
@@ -69,7 +73,7 @@ class PHPGangsta_GoogleAuthenticator
         }
 
         if (!in_array($algo, hash_hmac_algos())) {
-            throw new Exception('Invalid HMAC algorithm.');
+            throw new \Exception('Invalid HMAC algorithm.');
         }
 
         $secretkey = $this->_base32Decode($secret);
@@ -154,12 +158,12 @@ class PHPGangsta_GoogleAuthenticator
      *
      * @param int $length
      *
-     * @return PHPGangsta_GoogleAuthenticator
+     * @return GoogleAuthenticator
      */
-    public function setCodeLength(int $length): PHPGangsta_GoogleAuthenticator
+    public function setCodeLength(int $length): self
     {
         if ($length < 6) {
-            throw new Exception('Code length must be greater than or equal to 6.');
+            throw new \Exception('Code length must be greater than or equal to 6.');
         }
 
         $this->_codeLength = $length;
@@ -243,23 +247,6 @@ class PHPGangsta_GoogleAuthenticator
      */
     private function timingSafeEquals(string $safeString, string $userString): bool
     {
-        if (function_exists('hash_equals')) {
-            return hash_equals($safeString, $userString);
-        }
-        $safeLen = strlen($safeString);
-        $userLen = strlen($userString);
-
-        if ($userLen != $safeLen) {
-            return false;
-        }
-
-        $result = 0;
-
-        for ($i = 0; $i < $userLen; ++$i) {
-            $result |= (ord($safeString[$i]) ^ ord($userString[$i]));
-        }
-
-        // They are only identical strings if $result is exactly 0...
-        return $result === 0;
+        return hash_equals($safeString, $userString);
     }
 }
