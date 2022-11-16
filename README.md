@@ -9,7 +9,7 @@
 [![License](https://poser.pugx.org/neto737/googleauthenticator/license?style=for-the-badge)](https://packagist.org/packages/neto737/googleauthenticator)
 [![PHP Version Require](https://poser.pugx.org/neto737/googleauthenticator/require/php?style=for-the-badge)](https://packagist.org/packages/neto737/googleauthenticator)
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/neto737/GoogleAuthenticator/PHP%20Composer?logo=github&style=for-the-badge)](https://github.com/neto737/googleauthenticator)
-<!-- [![Codecov branch](https://img.shields.io/codecov/c/gh/neto737/googleauthenticator/main?logo=codecov&style=for-the-badge&token=38KPL9BX5F)](https://app.codecov.io/gh/neto737/googleauthenticator) -->
+[![Codecov branch](https://img.shields.io/codecov/c/gh/neto737/googleauthenticator/main?logo=codecov&style=for-the-badge&token=38KPL9BX5F)](https://app.codecov.io/gh/neto737/googleauthenticator)
 
 This PHP class can be used to interact with the Google Authenticator mobile app for 2-factor-authentication. This class
 can generate secrets, generate codes, validate codes and present a QR-Code for scanning the secret. It implements TOTP 
