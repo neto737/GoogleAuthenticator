@@ -14,6 +14,8 @@ class GoogleAuthenticator
 {
     protected $_codeLength = 6;
 
+    protected $hashAlgo = 'sha1';
+
     /**
      * Create new secret.
      * 16 characters, randomly chosen from the allowed base32 characters.
@@ -62,18 +64,10 @@ class GoogleAuthenticator
      *
      * @return string
      */
-    public function getCode(string $secret, ?int $timeSlice = null, ?string $algo = null): string
+    public function getCode(string $secret, ?int $timeSlice = null): string
     {
         if ($timeSlice === null) {
             $timeSlice = floor(time() / 30);
-        }
-
-        if ($algo === null) {
-            $algo = 'sha1';
-        }
-
-        if (!in_array($algo, hash_hmac_algos())) {
-            throw new \Exception('Invalid HMAC algorithm.');
         }
 
         $secretkey = $this->_base32Decode($secret);
@@ -81,7 +75,7 @@ class GoogleAuthenticator
         // Pack time into binary string
         $time = chr(0) . chr(0) . chr(0) . chr(0) . pack('N*', $timeSlice);
         // Hash it with users secret key
-        $hm = hash_hmac($algo, $time, $secretkey, true);
+        $hm = hash_hmac($this->hashAlgo, $time, $secretkey, true);
         // Use last nipple of result as index/offset
         $offset = ord(substr($hm, -1)) & 0x0F;
         // grab 4 bytes of the result
@@ -113,9 +107,8 @@ class GoogleAuthenticator
         $width = !empty($params['width']) && (int) $params['width'] > 0 ? (int) $params['width'] : 200;
         $height = !empty($params['height']) && (int) $params['height'] > 0 ? (int) $params['height'] : 200;
         $level = !empty($params['level']) && array_search($params['level'], ['L', 'M', 'Q', 'H']) !== false ? $params['level'] : 'M';
-        $algo = !empty($params['algo']) ? $params['algo'] : 'sha1';
 
-        $urlencoded = urlencode('otpauth://totp/' . $name . '?secret=' . $secret . ($algo !== 'sha1' ? '&algorithm=' . $algo : ''));
+        $urlencoded = urlencode('otpauth://totp/' . $name . '?secret=' . $secret . ($this->hashAlgo !== 'sha1' ? '&algorithm=' . $this->hashAlgo : ''));
         if (isset($title)) {
             $urlencoded .= urlencode('&issuer=' . urlencode($title));
         }
@@ -133,7 +126,7 @@ class GoogleAuthenticator
      *
      * @return bool
      */
-    public function verifyCode(string $secret, string $code, int $discrepancy = 1, ?int $currentTimeSlice = null, ?string $algo = null): bool
+    public function verifyCode(string $secret, string $code, int $discrepancy = 1, ?int $currentTimeSlice = null): bool
     {
         if ($currentTimeSlice === null) {
             $currentTimeSlice = floor(time() / 30);
@@ -144,7 +137,7 @@ class GoogleAuthenticator
         }
 
         for ($i = -$discrepancy; $i <= $discrepancy; ++$i) {
-            $calculatedCode = $this->getCode($secret, $currentTimeSlice + $i, $algo);
+            $calculatedCode = $this->getCode($secret, $currentTimeSlice + $i);
             if ($this->timingSafeEquals($calculatedCode, $code)) {
                 return true;
             }
@@ -172,6 +165,24 @@ class GoogleAuthenticator
     }
 
     /**
+     * Set hash HMAC algorithm
+     * 
+     * @param string $algo
+     * 
+     * @return GoogleAuthenticator
+     */
+    public function setHashAlgorithm(string $algo): self
+    {
+        if (!in_array($algo, hash_hmac_algos())) {
+            throw new \Exception('HMAC algorithm not supported.');
+        }
+
+        $this->hashAlgo = $algo;
+
+        return $this;
+    }
+
+    /**
      * Helper class to decode base32.
      *
      * @param $secret
@@ -189,9 +200,11 @@ class GoogleAuthenticator
 
         $paddingCharCount = substr_count($secret, $base32chars[32]);
         $allowedValues = [6, 4, 3, 1, 0];
+
         if (!in_array($paddingCharCount, $allowedValues)) {
             return false;
         }
+
         for ($i = 0; $i < 4; ++$i) {
             if (
                 $paddingCharCount == $allowedValues[$i] &&
@@ -200,18 +213,24 @@ class GoogleAuthenticator
                 return false;
             }
         }
+
         $secret = str_replace('=', '', $secret);
         $secret = str_split($secret);
         $binaryString = '';
+
         for ($i = 0; $i < count($secret); $i = $i + 8) {
             $x = '';
+
             if (!in_array($secret[$i], $base32chars)) {
                 return false;
             }
+
             for ($j = 0; $j < 8; ++$j) {
                 $x .= str_pad(base_convert((string) @$base32charsFlipped[@$secret[$i + $j]], 10, 2), 5, '0', STR_PAD_LEFT);
             }
+
             $eightBits = str_split($x, 8);
+            
             for ($z = 0; $z < count($eightBits); ++$z) {
                 $binaryString .= (($y = chr(base_convert((string) $eightBits[$z], 2, 10))) || ord($y) == 48) ? $y : '';
             }
