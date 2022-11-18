@@ -17,7 +17,7 @@ class GoogleAuthenticatorTest extends TestCase
         $this->googleAuthenticator = new GoogleAuthenticator;
     }
 
-    public function codeProvider(): array
+    public function codeProviderSha1(): array
     {
         // Secret, timeSlice, code, codeLength
         return [
@@ -30,15 +30,27 @@ class GoogleAuthenticatorTest extends TestCase
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '37037037', '14050471', 8],
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '41152263', '89005924', 8],
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '66666666', '69279037', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '666666666', '65353130', 8],
+            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '666666666', '65353130', 8]
+        ];
+    }
 
+    public function codeProviderSha256(): array
+    {
+        // Secret, timeSlice, code, codeLength
+        return [
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '1', '46119246', 8],
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '37037036', '68084774', 8],
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '37037037', '67062674', 8],
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '41152263', '91819424', 8],
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '66666666', '90698825', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '666666666', '77737706', 8],
+            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '666666666', '77737706', 8]
+        ];
+    }
 
+    public function codeProviderSha512(): array
+    {
+        // Secret, timeSlice, code, codeLength
+        return [
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '1', '90693936', 8],
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '37037036', '25091201', 8],
             ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '37037037', '99943326', 8],
@@ -75,11 +87,35 @@ class GoogleAuthenticatorTest extends TestCase
     }
 
     /**
-     * @dataProvider codeProvider
+     * @dataProvider codeProviderSha1
      */
-    public function testGetCodeReturnsCorrectValues($secret, $timeSlice, $code, $length = 6): void
+    public function testGetCodeReturnsCorrectValuesSha1($secret, $timeSlice, $code, $length = 6): void
     {
         $this->googleAuthenticator->setCodeLength($length);
+        $generatedCode = $this->googleAuthenticator->getCode($secret, $timeSlice);
+
+        $this->assertEquals($code, $generatedCode);
+    }
+
+    /**
+     * @dataProvider codeProviderSha256
+     */
+    public function testGetCodeReturnsCorrectValuesSha256($secret, $timeSlice, $code, $length = 6): void
+    {
+        $this->googleAuthenticator->setCodeLength($length);
+        $this->googleAuthenticator->setHashAlgorithm('sha256');
+        $generatedCode = $this->googleAuthenticator->getCode($secret, $timeSlice);
+
+        $this->assertEquals($code, $generatedCode);
+    }
+
+    /**
+     * @dataProvider codeProviderSha512
+     */
+    public function testGetCodeReturnsCorrectValuesSha512($secret, $timeSlice, $code, $length = 6): void
+    {
+        $this->googleAuthenticator->setCodeLength($length);
+        $this->googleAuthenticator->setHashAlgorithm('sha512');
         $generatedCode = $this->googleAuthenticator->getCode($secret, $timeSlice);
 
         $this->assertEquals($code, $generatedCode);
