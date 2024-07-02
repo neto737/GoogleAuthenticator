@@ -1,6 +1,7 @@
 <?php
 
 namespace neto737;
+
 /**
  * PHP Class for handling Google Authenticator 2-factor authentication.
  *
@@ -12,9 +13,44 @@ namespace neto737;
  */
 class GoogleAuthenticator
 {
-    protected $_codeLength = 6;
+    /**
+     * @param int|null $codeLength
+     * @param string|null @algorithm
+     * @throws Exception
+     */
+    public function __construct(private ?int $codeLength = 6, private ?string $algorithm = 'sha256')
+    {
+        $this->codeLength = $codeLength ?: 6;
+        $this->algorithm = $algorithm ?: 'sha256';
 
-    protected $hashAlgo = 'sha1';
+        if ($this->codeLength < 6) {
+            throw new \ValueError('Code length must be greater than or equal to 6.');
+        }
+
+        if (!in_array($this->algorithm, hash_hmac_algos())) {
+            throw new \ValueError('HMAC algorithm not supported.');
+        }
+    }
+
+    /**
+     * Returns current code length
+     * 
+     * @return int
+     */
+    public function getCodeLength(): int
+    {
+        return $this->codeLength;
+    }
+
+    /**
+     * Returns current hash algorithm
+     * 
+     * @return string
+     */
+    public function getAlgorithm(): string
+    {
+        return $this->algorithm;
+    }
 
     /**
      * Create new secret.
@@ -24,15 +60,15 @@ class GoogleAuthenticator
      *
      * @return string
      */
-    public function createSecret(int $secretLength = 16): string
+    public function createSecret(int $secretLength = 32): string
     {
         $validChars = $this->_getBase32LookupTable();
 
         // Valid secret lengths are 80 to 640 bits
         if ($secretLength < 16 || $secretLength > 128) {
-            throw new \Exception('Bad secret length');
+            throw new \ValueError('Secret length must be a value between 16 and 128.');
         }
-        
+
         $secret = '';
         $rnd = false;
 
@@ -46,7 +82,7 @@ class GoogleAuthenticator
         }
 
         if ($rnd !== false) {
-            for ($i = 0; $i < $secretLength; ++$i) {
+            for ($i = 0; $i < $secretLength; $i++) {
                 $secret .= $validChars[ord($rnd[$i]) & 31];
             }
         } else {
@@ -66,16 +102,14 @@ class GoogleAuthenticator
      */
     public function getCode(string $secret, ?int $timeSlice = null): string
     {
-        if ($timeSlice === null) {
-            $timeSlice = floor(time() / 30);
-        }
+        $timeSlice = $timeSlice ?? floor(time() / 30);
 
         $secretkey = $this->_base32Decode($secret);
 
         // Pack time into binary string
         $time = chr(0) . chr(0) . chr(0) . chr(0) . pack('N*', $timeSlice);
         // Hash it with users secret key
-        $hm = hash_hmac($this->hashAlgo, $time, $secretkey, true);
+        $hm = hash_hmac($this->algorithm, $time, $secretkey, true);
         // Use last nipple of result as index/offset
         $offset = ord(substr($hm, -1)) & 0x0F;
         // grab 4 bytes of the result
@@ -87,33 +121,36 @@ class GoogleAuthenticator
         // Only 32 bits
         $value = $value & 0x7FFFFFFF;
 
-        $modulo = pow(10, $this->_codeLength);
+        $modulo = pow(10, $this->codeLength);
 
-        return str_pad($value % $modulo, $this->_codeLength, '0', STR_PAD_LEFT);
+        return str_pad($value % $modulo, $this->codeLength, '0', STR_PAD_LEFT);
     }
 
     /**
      * Get QR-Code URL for image, from google charts.
      *
-     * @param string $name
      * @param string $secret
+     * @param string $name
      * @param string $title
      * @param array  $params
      *
      * @return string
      */
-    public function getQRCodeGoogleUrl(string $name, string $secret, string $title = null, array $params = []): string
+    public function getQRCodeGoogleUrl(string $secret, string $name, ?string $title = null, array $params = []): string
     {
         $width = !empty($params['width']) && (int) $params['width'] > 0 ? (int) $params['width'] : 200;
         $height = !empty($params['height']) && (int) $params['height'] > 0 ? (int) $params['height'] : 200;
-        $level = !empty($params['level']) && array_search($params['level'], ['L', 'M', 'Q', 'H']) !== false ? $params['level'] : 'M';
+        $ecc = !empty($params['ecc']) && in_array($params['ecc'], ['L', 'M', 'Q', 'H']) ? $params['ecc'] : 'M';
 
-        $urlencoded = urlencode('otpauth://totp/' . $name . '?secret=' . $secret . ($this->hashAlgo !== 'sha1' ? '&algorithm=' . $this->hashAlgo : ''));
-        if (isset($title)) {
-            $urlencoded .= urlencode('&issuer=' . urlencode($title));
-        }
+        $urlencoded = urlencode(
+            'otpauth://totp/' .
+                (!is_null($title) ? $title . ':' : '') . $name .
+                '?secret=' . $secret .
+                ($this->algorithm !== 'sha1' ? '&algorithm=' . $this->algorithm : '') .
+                (!is_null($title) ? '&issuer=' . $title : '')
+        );
 
-        return "https://api.qrserver.com/v1/create-qr-code/?data=$urlencoded&size=${width}x${height}&ecc=$level";
+        return "https://api.qrserver.com/v1/create-qr-code/?data={$urlencoded}&size={$width}x{$height}&ecc={$ecc}";
     }
 
     /**
@@ -128,58 +165,20 @@ class GoogleAuthenticator
      */
     public function verifyCode(string $secret, string $code, int $discrepancy = 1, ?int $currentTimeSlice = null): bool
     {
-        if ($currentTimeSlice === null) {
-            $currentTimeSlice = floor(time() / 30);
-        }
+        $currentTimeSlice = $currentTimeSlice ?? floor(time() / 30);
 
-        if (strlen($code) !== $this->_codeLength) {
+        if (strlen($code) !== $this->codeLength) {
             return false;
         }
 
-        for ($i = -$discrepancy; $i <= $discrepancy; ++$i) {
+        for ($i = -$discrepancy; $i <= $discrepancy; $i++) {
             $calculatedCode = $this->getCode($secret, $currentTimeSlice + $i);
-            if ($this->timingSafeEquals($calculatedCode, $code)) {
+            if (self::timingSafeEquals($calculatedCode, $code)) {
                 return true;
             }
         }
 
         return false;
-    }
-
-    /**
-     * Set the code length, should be >=6.
-     *
-     * @param int $length
-     *
-     * @return GoogleAuthenticator
-     */
-    public function setCodeLength(int $length): self
-    {
-        if ($length < 6) {
-            throw new \Exception('Code length must be greater than or equal to 6.');
-        }
-
-        $this->_codeLength = $length;
-
-        return $this;
-    }
-
-    /**
-     * Set hash HMAC algorithm
-     * 
-     * @param string $algo
-     * 
-     * @return GoogleAuthenticator
-     */
-    public function setHashAlgorithm(string $algo): self
-    {
-        if (!in_array($algo, hash_hmac_algos())) {
-            throw new \Exception('HMAC algorithm not supported.');
-        }
-
-        $this->hashAlgo = $algo;
-
-        return $this;
     }
 
     /**
@@ -205,7 +204,7 @@ class GoogleAuthenticator
             return false;
         }
 
-        for ($i = 0; $i < 4; ++$i) {
+        for ($i = 0; $i < 4; $i++) {
             if (
                 $paddingCharCount == $allowedValues[$i] &&
                 substr($secret, - ($allowedValues[$i])) != str_repeat($base32chars[32], $allowedValues[$i])
@@ -225,13 +224,13 @@ class GoogleAuthenticator
                 return false;
             }
 
-            for ($j = 0; $j < 8; ++$j) {
+            for ($j = 0; $j < 8; $j++) {
                 $x .= str_pad(base_convert((string) @$base32charsFlipped[@$secret[$i + $j]], 10, 2), 5, '0', STR_PAD_LEFT);
             }
 
             $eightBits = str_split($x, 8);
-            
-            for ($z = 0; $z < count($eightBits); ++$z) {
+
+            for ($z = 0; $z < count($eightBits); $z++) {
                 $binaryString .= (($y = chr(base_convert((string) $eightBits[$z], 2, 10))) || ord($y) == 48) ? $y : '';
             }
         }
@@ -264,7 +263,7 @@ class GoogleAuthenticator
      *
      * @return bool True if the two strings are identical
      */
-    private function timingSafeEquals(string $safeString, string $userString): bool
+    private static function timingSafeEquals(string $safeString, string $userString): bool
     {
         return hash_equals($safeString, $userString);
     }

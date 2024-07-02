@@ -1,181 +1,231 @@
 <?php
 
 use neto737\GoogleAuthenticator;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(GoogleAuthenticator::class)]
+#[UsesClass(GoogleAuthenticator::class)]
 class GoogleAuthenticatorTest extends TestCase
 {
     /**
-     * Authenticator class instance
-     *
-     * @var GoogleAuthenticator
+     * @return array[] of parameters
+     * Thanks to https://github.com/PHPGangsta/GoogleAuthenticator/pull/41
      */
-    protected $googleAuthenticator;
-
-    protected function setUp(): void
+    public static function paramsProvider(): array
     {
-        $this->googleAuthenticator = new GoogleAuthenticator;
-    }
-
-    public function codeProviderSha1(): array
-    {
-        // Secret, timeSlice, code, codeLength
         return [
-            ['SECRET', '0', '200470'],
-            ['SECRET', '1385909245', '780018'],
-            ['SECRET', '1378934578', '705013'],
-
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '1', '94287082', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '37037036', '07081804', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '37037037', '14050471', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '41152263', '89005924', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '66666666', '69279037', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', '666666666', '65353130', 8]
+            [null, null, null, '200x200', 'M'],
+            [-1, -1, null, '200x200', 'M'],
+            [250, 250, 'L', '250x250', 'L'],
+            [250, 250, 'M', '250x250', 'M'],
+            [250, 250, 'Q', '250x250', 'Q'],
+            [250, 250, 'H', '250x250', 'H'],
+            [250, 250, 'Z', '250x250', 'M'],
         ];
     }
 
-    public function codeProviderSha256(): array
+    /**
+     * @return array[] of check triples
+     */
+    public static function codeProvider(): array
     {
-        // Secret, timeSlice, code, codeLength
+        // Secret, unix-time, code
         return [
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '1', '46119246', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '37037036', '68084774', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '37037037', '67062674', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '41152263', '91819424', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '66666666', '90698825', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA', '666666666', '77737706', 8]
+            ['SECRET', 0, '377331'],
+            ['SECRET', 1385909245, '010454'],
+            ['SECRET', 1378934578, '299040'],
         ];
     }
 
-    public function codeProviderSha512(): array
+    public function testGenerator()
     {
-        // Secret, timeSlice, code, codeLength
-        return [
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '1', '90693936', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '37037036', '25091201', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '37037037', '99943326', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '41152263', '93441116', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '66666666', '38618901', 8],
-            ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA', '666666666', '47863826', 8]
-        ];
+        ob_start();
+        $auth = new GoogleAuthenticator;
+        try {
+            $secret = $auth->createSecret();
+        } catch (Exception $e) {
+            echo $e->getMessage();
+            $this->fail();
+        }
+        echo "Secret is: " . $secret . "\n\n";
+
+        $qrCodeUrl = $auth->getQRCodeGoogleUrl($secret, 'Test@test.test', 'Company');
+        echo "Google Charts URL for the QR-Code: " . $qrCodeUrl . "\n\n";
+
+        $oneCode = $auth->getCode($secret);
+        echo "Checking Code '$oneCode' and Secret '$secret':\n";
+
+        ob_end_clean();
+
+        $this->assertTrue($auth->verifyCode($secret, $oneCode, 2));
     }
 
-    public function testItCanBeInstantiated(): void
+    public function testConstructorException()
     {
-        $ga = new GoogleAuthenticator;
-
-        $this->assertInstanceOf('neto737\GoogleAuthenticator', $ga);
+        $this->expectException(ValueError::class);
+        $auth = new GoogleAuthenticator(0);
+        $secret = $auth->createSecret(0);
     }
 
-    public function testCreateSecretDefaultsToSixteenCharacters(): void
+    public function testCreateSecretTooLowSecret()
     {
-        $ga = $this->googleAuthenticator;
-        $secret = $ga->createSecret();
-
-        $this->assertEquals(strlen($secret), 16);
+        $this->expectException(ValueError::class);
+        $auth = new GoogleAuthenticator;
+        $secret = $auth->createSecret(0);
     }
 
-    public function testCreateSecretLengthCanBeSpecified(): void
+    public function testCreateSecretTooHighSecret()
     {
-        $ga = $this->googleAuthenticator;
+        $this->expectException(ValueError::class);
+        $auth = new GoogleAuthenticator;
+        $secret = $auth->createSecret(99999);
+    }
+
+    public function testCreateSecretOnNull()
+    {
+        $auth = new GoogleAuthenticator(null);
+        $this->assertEquals(6, $auth->getCodeLength());
+        $this->assertEquals('sha256', $auth->getAlgorithm());
+
+        $auth = new GoogleAuthenticator(6, null);
+        $this->assertEquals(6, $auth->getCodeLength());
+        $this->assertEquals('sha256', $auth->getAlgorithm());
+    }
+
+
+    public function testCreateSecretWithWrongHashFunction()
+    {
+        $this->expectException(ValueError::class);
+        $auth = new GoogleAuthenticator(6, 'DOGGO');
+    }
+
+    public function testCreateSecretDefaultsToSixteenCharacters()
+    {
+        $auth = new GoogleAuthenticator;
+        $secret = $auth->createSecret();
+
+        $this->assertEquals(32, strlen($secret));
+    }
+
+    public function testCreateSecretLengthCanBeSpecified()
+    {
+        $auth = new GoogleAuthenticator;
 
         for ($secretLength = 16; $secretLength < 100; ++$secretLength) {
-            $secret = $ga->createSecret($secretLength);
+            $secret = $auth->createSecret($secretLength);
 
             $this->assertEquals(strlen($secret), $secretLength);
         }
     }
 
-    /**
-     * @dataProvider codeProviderSha1
-     */
-    public function testGetCodeReturnsCorrectValuesSha1($secret, $timeSlice, $code, $length = 6): void
+    #[DataProvider('codeProvider')]
+    public function testGetCodeReturnsCorrectValues($secret, $timeSlice, $code)
     {
-        $this->googleAuthenticator->setCodeLength($length);
-        $generatedCode = $this->googleAuthenticator->getCode($secret, $timeSlice);
+        $auth = new GoogleAuthenticator;
 
-        $this->assertEquals($code, $generatedCode);
+        $this->assertEquals($code, $auth->getCode($secret, $timeSlice));
     }
 
-    /**
-     * @dataProvider codeProviderSha256
-     */
-    public function testGetCodeReturnsCorrectValuesSha256($secret, $timeSlice, $code, $length = 6): void
+    public function testGetQRCodeGoogleUrlReturnsCorrectUrl()
     {
-        $this->googleAuthenticator->setCodeLength($length);
-        $this->googleAuthenticator->setHashAlgorithm('sha256');
-        $generatedCode = $this->googleAuthenticator->getCode($secret, $timeSlice);
+        $auth = new GoogleAuthenticator;
 
-        $this->assertEquals($code, $generatedCode);
-    }
-
-    /**
-     * @dataProvider codeProviderSha512
-     */
-    public function testGetCodeReturnsCorrectValuesSha512($secret, $timeSlice, $code, $length = 6): void
-    {
-        $this->googleAuthenticator->setCodeLength($length);
-        $this->googleAuthenticator->setHashAlgorithm('sha512');
-        $generatedCode = $this->googleAuthenticator->getCode($secret, $timeSlice);
-
-        $this->assertEquals($code, $generatedCode);
-    }
-
-    public function testGetQRCodeGoogleUrlReturnsCorrectUrl(): void
-    {
         $secret = 'SECRET';
         $name = 'Test';
-        $url = $this->googleAuthenticator->getQRCodeGoogleUrl($name, $secret);
+        $url = $auth->getQRCodeGoogleUrl($secret, $name);
         $urlParts = parse_url($url);
 
         parse_str($urlParts['query'], $queryStringArray);
 
-        $this->assertEquals($urlParts['scheme'], 'https');
-        $this->assertEquals($urlParts['host'], 'api.qrserver.com');
-        $this->assertEquals($urlParts['path'], '/v1/create-qr-code/');
+        $this->assertEquals('https', $urlParts['scheme']);
+        $this->assertEquals('api.qrserver.com', $urlParts['host']);
+        $this->assertEquals('/v1/create-qr-code/', $urlParts['path']);
 
-        $expectedChl = 'otpauth://totp/' . $name . '?secret=' . $secret;
+        $expectedChl = 'otpauth://totp/' . $name . '?secret=' . $secret . '&algorithm=sha256';
 
         $this->assertEquals($queryStringArray['data'], $expectedChl);
     }
 
-    public function testVerifyCode(): void
+    public function testVerifyCode()
     {
-        $secret = 'SECRET';
-        $code = $this->googleAuthenticator->getCode($secret);
-        $result = $this->googleAuthenticator->verifyCode($secret, $code);
+        $auth = new GoogleAuthenticator;
 
-        $this->assertEquals(true, $result);
+        $secret = 'SECRET';
+        $code = $auth->getCode($secret);
+        $result = $auth->verifyCode($secret, $code);
+
+        $this->assertTrue($result);
 
         $code = 'INVALIDCODE';
-        $result = $this->googleAuthenticator->verifyCode($secret, $code);
+        $result = $auth->verifyCode($secret, $code);
 
-        $this->assertEquals(false, $result);
+        $this->assertFalse($result);
     }
 
-    public function testVerifyCodeWithLeadingZero(): void
+    public function testVerifyCodeWithLeadingZero()
     {
+        $auth = new GoogleAuthenticator;
+
         $secret = 'SECRET';
-        $code = $this->googleAuthenticator->getCode($secret);
-        $result = $this->googleAuthenticator->verifyCode($secret, $code);
-        $this->assertEquals(true, $result);
+        $code = $auth->getCode($secret);
+        $result = $auth->verifyCode($secret, $code);
+        $this->assertTrue($result);
 
         $code = '0' . $code;
-        $result = $this->googleAuthenticator->verifyCode($secret, $code);
-        $this->assertEquals(false, $result);
+        $result = $auth->verifyCode($secret, $code);
+        $this->assertFalse($result);
     }
 
-    public function testSetCodeLength(): void
+    public function testVerifyCodeWithWrongCode()
     {
-        $result = $this->googleAuthenticator->setCodeLength(6);
+        $auth = new GoogleAuthenticator;
 
-        $this->assertInstanceOf('neto737\GoogleAuthenticator', $result);
-    }
-
-    public function testValidateCorrectCodeLength(): void
-    {
         $secret = 'SECRET';
-        $this->googleAuthenticator->setCodeLength(8);
-        $this->assertEquals(true, $this->googleAuthenticator->verifyCode($secret, $this->googleAuthenticator->getCode($secret)));
+        $code = "000000";
+        $result = $auth->verifyCode($auth->getCode($secret), $code);
+        $this->assertFalse($result);
+    }
+
+    public function testEmptySecret()
+    {
+        $auth = new GoogleAuthenticator;
+
+        $secret = '';
+        $code = "000000";
+        $result = $auth->verifyCode($auth->getCode($secret), $code);
+        $this->assertFalse($result);
+    }
+
+    public function testLongerUserKey()
+    {
+        $auth = new GoogleAuthenticator;
+
+        $secret = '';
+        $code = "00000000";
+        $result = $auth->verifyCode($auth->getCode($secret), $code);
+        $this->assertFalse($result);
+    }
+
+    #[DataProvider('paramsProvider')]
+    public function testGetQRCodeGoogleUrlReturnsCorrectUrlWithOptionalParameters($width, $height, $ecc, $expectedSize, $expectedLevel)
+    {
+        $auth = new GoogleAuthenticator;
+
+        $secret = 'SECRET';
+        $name = 'Test';
+        $url = $auth->getQRCodeGoogleUrl($secret, $name, null, [
+            'width' => $width,
+            'height' => $height,
+            'ecc' => $ecc
+        ]);
+        $urlParts = parse_url($url);
+
+        parse_str($urlParts['query'], $queryStringArray);
+
+        $this->assertEquals($queryStringArray['size'], $expectedSize);
+        $this->assertEquals($queryStringArray['ecc'], $expectedLevel);
     }
 }
