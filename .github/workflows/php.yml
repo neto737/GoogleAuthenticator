@@ -38,7 +38,7 @@ jobs:
       run: composer install --prefer-dist --no-progress
       
     - name: Unit Tests
-      run: XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover=coverage.xml --whitelist src ./tests
+      run: XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover=coverage.xml
       
     - name: Codecov
       uses: codecov/codecov-action@v3.1.1
