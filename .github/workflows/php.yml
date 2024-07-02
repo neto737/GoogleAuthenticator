@@ -41,12 +41,12 @@ jobs:
       run: XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover=coverage.xml
       
     - name: Codecov
-      uses: codecov/codecov-action@v3.1.1
-
+      uses: codecov/codecov-action@v4.5.0
       with:
         files: ./coverage.xml # optional
         fail_ci_if_error: true # optional (default = false)
         verbose: true # optional (default = false)
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
     # Docs: https://getcomposer.org/doc/articles/scripts.md
