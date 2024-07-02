@@ -31,8 +31,6 @@ jobs:
 
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
-      with:
-        php-version: 8.2
       
     - name: Unit Tests
       run: XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-clover=coverage.xml --whitelist src ./tests
